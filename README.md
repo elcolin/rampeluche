@@ -6,6 +6,9 @@ This project aims to create a two wheel bot capable of SLAM and autonomous navig
 
 ![Rampeluche](rampeluche.jpg)
 
+Issues :  
+    - Reduce torque on stall for wheel -> digs into the plastic
+
 ## Datasheets
 
 ### Motor

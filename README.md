@@ -29,7 +29,9 @@ Micro motors in the wheels.
 ### Motor Driver
 
 - Adafruit TB6612 1.2A DC/Stepper Motor Driver Breakout Board
-    [Datasheet](datasheet/adafruit-tb6612-h-bridge-dc-stepper-motor-driver-breakout.pdf)
+    [Datasheet](datasheet/motor_driver/adafruit-tb6612-h-bridge-dc-stepper-motor-driver-breakout.pdf)
+- TB6612 Chip
+    [Datasheet](datasheet/motor_driver/TB6612FNG_datasheet_en_20121101.pdf)
 
 ### IMU
 

@@ -40,5 +40,5 @@ Micro motors in the wheels.
 
 ## CAD
 
-3d files can be found in the cad file : Most models are based on the ORP plateform.
- 
+3d files can be found in the cad file : Lots of models are ORP plateform based.
+    [Parts](https://openroboticplatform.com/user:ColorGama)

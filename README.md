@@ -2,6 +2,10 @@
 
 This project aims to create a two wheel bot capable of SLAM and autonomous navigation.
 
+## Current development
+
+
+
 ## Datasheets
 
 ### Motor
@@ -34,3 +38,7 @@ Micro motors in the wheels.
 - SLAMTEC rplidar A2M8
     [Datasheet](datasheet/LD208_SLAMTEC_rplidar_datasheet_A2M8_v2.6_en.pdf)
 
+## CAD
+
+3d files can be found in the cad file : Most models are based on the ORP plateform.
+ 

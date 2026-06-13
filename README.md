@@ -6,7 +6,7 @@ This project aims to create a two wheel bot capable of SLAM and autonomous navig
 
 ### Motor
 
-Micro motors in the wheels
+Micro motors in the wheels.  
     ![MotorWheel](datasheet/motor/MotorEncoderN20_12V.png)
 
 ### Microcontroller

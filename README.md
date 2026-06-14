@@ -14,7 +14,7 @@ Issues :
 ### Motor
 
 Micro motors in the wheels.  
-    ![MotorWheel](datasheet/motor/MotorEncoderN20_12V.png)
+    ![Motor Wheel](datasheet/motor/MotorEncoderN20_12V.png)
 
 ### Microcontroller
 
@@ -27,6 +27,8 @@ Micro motors in the wheels.
     [Datasheet](datasheet/VERTER-5V-USB-Buck-Boost.pdf)
 
 ### Motor Driver
+
+![Motor Driver Pinout](datasheet/motor_driver/DriverMotor.png)
 
 - Adafruit TB6612 1.2A DC/Stepper Motor Driver Breakout Board
     [Datasheet](datasheet/motor_driver/adafruit-tb6612-h-bridge-dc-stepper-motor-driver-breakout.pdf)

@@ -1,83 +1,129 @@
 #include <Arduino.h>
 #include "DriverMotor.h"
+#include <WiFi.h>
 
-
+const uint8_t encoderA = 15;
+const uint8_t encoderB = 16;
 DriverMotor MotDriver;
 
-void setup() {
+volatile bool A;
+volatile bool B;
 
-    MotDriver.setupDriver();
-    Serial.begin(115200);
-}
-
-
-void loop() {
-
-    MotDriver.Motors[LEFT].setMotorForward(25);
-    MotDriver.Motors[RIGHT].setMotorForward(25);
-
-    delay(1000);
-
-    MotDriver.Motors[LEFT].setMotorBackward(25);
-    MotDriver.Motors[RIGHT].setMotorBackward(25);
-
-    delay(1000);
-
-
-}
-
-
-// // Set LED_BUILTIN if it is not defined by Arduino framework
-// #ifndef LED_BUILTIN
-//     #define LED_BUILTIN 2
-// #endif
-
-// void setup()
-// {
-//   // initialize LED digital pin as an output.
-//   pinMode(LED_BUILTIN, OUTPUT);
-// }
-
-// void loop()
-// {
-//   // turn the LED on (HIGH is the voltage level)
-//   digitalWrite(LED_BUILTIN, HIGH);
-//   // wait for a second
-//   delay(500);
-//   // turn the LED off by making the voltage LOW
-//   digitalWrite(LED_BUILTIN, LOW);
-//    // wait for a second
-//   delay(500);
-// }
-
-// const int PIN_36 = 11;
-// const int PIN_37 = 12;
-
-// volatile long encoderCount = 0;
-
-// const uint8_t encoderA = 36;
-// const uint8_t encoderB = 37;
-
-// void IRAM_ATTR encoderISR() {
 //   bool A = digitalRead(encoderA);
 //   bool B = digitalRead(encoderB);
 
-//   if (A == B) {
-//     encoderCount++;
-//   } else {
-//     encoderCount--;
-//   }
-// }
+volatile long encoderCount = 0;
+volatile unsigned long lastInterruptTime = 0;
 
-// void setup() {
-//   Serial.begin(115200);
+void IRAM_ATTR encoderISR() {
+    A = digitalRead(encoderA);
+    B = digitalRead(encoderB);
+    if (A && B)
+        encoderCount++;
+}
 
-//   pinMode(encoderA, INPUT);
-//   pinMode(encoderB, INPUT);
-// }
+WiFiServer server(1234);
 
-// void loop() {
-//   Serial.print(digitalRead(encoderA));
-//   Serial.print(" ");
-//   Serial.println(digitalRead(encoderB));
-// }
+void setup() {
+
+    Serial.begin(115200);
+
+//     pinMode(encoderA, INPUT_PULLUP);
+//     pinMode(encoderB, INPUT_PULLUP);
+
+//     attachInterrupt(
+//     digitalPinToInterrupt(encoderA),
+//     encoderISR,
+//     CHANGE
+//   );
+    WiFi.softAP(
+        "ESP32_Control",
+        "12345678"
+    );
+
+    Serial.println(WiFi.softAPIP());
+
+    server.begin();
+    MotDriver.setupDriver();
+    // Serial.begin(115200);
+}
+
+
+uint8_t speed = 35;
+
+void input_key(char c)
+{
+    static double speed_left = 0;
+    static double speed_right = 0;
+    static int direction = 0;
+
+    switch (c)
+    {
+        case 'w':
+            speed_left = 1.5;
+            speed_right = 1.5;
+            direction = 1;
+
+            break;
+        case 's':
+            speed_left = -1.25;
+            speed_right = -1.25;
+            direction = -1;
+            break;
+        case 'a':
+            speed_left = -std::copysign(0.90, direction);
+            speed_right = std::copysign(0.90, direction);
+
+            // speed_left = -0.90;
+            // speed_right = 0.90;
+
+
+            break;
+        case 'd':
+            // speed_left = 0.90;
+            // speed_right = -0.90;
+
+            speed_left = std::copysign(0.90, direction);
+            speed_right = -std::copysign(0.90, direction);
+
+            break;
+
+        default:
+            direction = 0;
+            speed_right = 0;
+            speed_left = 0;
+
+            MotDriver.Motors[LEFT].stopMotor();
+            MotDriver.Motors[RIGHT].stopMotor();
+        break;
+
+    }
+
+
+    if (speed_right >= 0)
+        MotDriver.Motors[RIGHT].setMotorForward(speed * speed_right);
+    if (speed_right < 0)
+        MotDriver.Motors[RIGHT].setMotorBackward(speed * std::abs(speed_right));
+    if (speed_left >= 0)
+        MotDriver.Motors[LEFT].setMotorForward(speed * speed_left);
+    if (speed_left < 0)
+        MotDriver.Motors[LEFT].setMotorBackward(speed * std::abs(speed_left));
+
+}
+
+void loop() {
+    Serial.println(WiFi.softAPIP());
+
+    WiFiClient client = server.available();
+
+    if (!client)
+        return;
+    while(client.connected()){
+        // Serial.println("Connected to client");
+        if (client.available()) {
+            char c = client.read();
+            Serial.println(c);
+            input_key(c);
+        }
+    }
+}

@@ -30,16 +30,6 @@
 #include <Arduino.h>
 #include "Motor.hpp"
 
-#define BIN1 39
-#define BIN2 40
-#define BPWM 41
-
-#define AIN1 37
-#define AIN2 36
-#define APWM 35
-
-#define STBY 38
-
 enum {
     LEFT = 0,
     RIGHT = 1,

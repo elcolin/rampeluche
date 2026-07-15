@@ -2,6 +2,8 @@
 
 #include <Arduino.h>
 
+#include "pins.hpp" 
+
 class Motor {
     public:
         Motor(const uint8_t IN1, const uint8_t IN2, const uint8_t PWM);

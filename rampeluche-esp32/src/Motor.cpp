@@ -19,7 +19,8 @@ void Motor::stopMotor()
 
 void Motor::setMotorForward(uint8_t per_speed)
 {
-    uint8_t speed = per_speed * 255 / 100;
+    per_speed = constrain(per_speed, 0, 100);
+    uint8_t speed = per_speed * 200 / 100;
     analogWrite(m_PWM, speed);
 
 
@@ -29,7 +30,8 @@ void Motor::setMotorForward(uint8_t per_speed)
 
 void Motor::setMotorBackward(uint8_t per_speed)
 {
-    uint8_t speed = per_speed * 255 / 100;
+    per_speed = constrain(per_speed, 0, 100);
+    uint8_t speed = per_speed * 200 / 100;
     analogWrite(m_PWM, speed);
 
     digitalWrite(m_IN1, LOW);

@@ -30,5 +30,6 @@ class LidarController {
         LidarController() = default;
         ~LidarController() = default;
         void startExpressScan();
+        void getSampleRate();
         void setup();
 };

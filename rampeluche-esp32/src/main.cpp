@@ -44,57 +44,36 @@ void setup() {
 }
 
 
-uint8_t speed = 35;
+constexpr uint8_t FORWARD_SPEED  = 70;  // % PWM en marche avant
+constexpr uint8_t BACKWARD_SPEED = 35;  // % PWM en marche arriere
+constexpr uint8_t TURN_SPEED     = 35;  // % PWM en pivot sur place
+constexpr unsigned long KEY_TIMEOUT_MS = 500; // coupure moteur si pas de touche recue
 
 void input_key(char c)
 {
-    static double speed_left = 0;
-    static double speed_right = 0;
-    static int direction = 0;
-
     switch (c)
     {
         case 'w':
-            speed_left = 2;
-            speed_right = 2;
-            direction = 1;
-
+            MotDriver.Motors[LEFT].setMotorForward(FORWARD_SPEED);
+            MotDriver.Motors[RIGHT].setMotorForward(FORWARD_SPEED);
             break;
         case 's':
-            speed_left = -1;
-            speed_right = -1;
-            direction = -1;
+            MotDriver.Motors[LEFT].setMotorBackward(BACKWARD_SPEED);
+            MotDriver.Motors[RIGHT].setMotorBackward(BACKWARD_SPEED);
             break;
-        case 'a':
-            speed_left = -std::copysign(1, direction);
-            speed_right = std::copysign(1, direction);
-
+        case 'a': // pivot vers la gauche
+            MotDriver.Motors[LEFT].setMotorBackward(TURN_SPEED);
+            MotDriver.Motors[RIGHT].setMotorForward(TURN_SPEED);
             break;
-        case 'd':
-
-            speed_left = std::copysign(1, direction);
-            speed_right = -std::copysign(1, direction);
-
+        case 'd': // pivot vers la droite
+            MotDriver.Motors[LEFT].setMotorForward(TURN_SPEED);
+            MotDriver.Motors[RIGHT].setMotorBackward(TURN_SPEED);
             break;
-
-        default:
-            direction = 0;
-            speed_right = 0;
-            speed_left = 0;
-        break;
-
+        default: // touche inconnue ou arret explicite
+            MotDriver.Motors[LEFT].stopMotor();
+            MotDriver.Motors[RIGHT].stopMotor();
+            break;
     }
-
-
-    if (speed_right >= 0)
-        MotDriver.Motors[RIGHT].setMotorForward(speed * speed_right);
-    if (speed_right < 0)
-        MotDriver.Motors[RIGHT].setMotorBackward(speed * std::abs(speed_right));
-    if (speed_left >= 0)
-        MotDriver.Motors[LEFT].setMotorForward(speed * speed_left);
-    if (speed_left < 0)
-        MotDriver.Motors[LEFT].setMotorBackward(speed * std::abs(speed_left));
-
 }
 
 struct CabinData {
@@ -177,12 +156,21 @@ void loop() {
     // LidCtl.generate_request_packet(0x82, (uint8_t *) buf, 0);
     Serial.println();
     memset(buf, 0, read_bytes);
+    unsigned long lastKeyTime = millis();
+    bool motorsStopped = false;
     while (client.connected())
     {
         if (client.available()) {
             char c = client.read();
             // Serial.println(c);
             input_key(c);
+            lastKeyTime = millis();
+            motorsStopped = false;
+        }
+        else if (!motorsStopped && millis() - lastKeyTime > KEY_TIMEOUT_MS) {
+            // securite : plus aucune touche recue, on coupe les moteurs
+            input_key(0);
+            motorsStopped = true;
         }
     }
     delay(500);

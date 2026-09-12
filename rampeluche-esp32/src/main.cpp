@@ -2,6 +2,7 @@
 #include "DriverMotor.h"
 #include "pins.hpp"
 #include "LidarController.hpp"
+#include "KeyboardControl.hpp"
 #include <WiFi.h>
 
 const uint8_t encoderA = 15;
@@ -44,36 +45,27 @@ void setup() {
 }
 
 
-constexpr uint8_t FORWARD_SPEED  = 70;  // % PWM en marche avant
-constexpr uint8_t BACKWARD_SPEED = 35;  // % PWM en marche arriere
-constexpr uint8_t TURN_SPEED     = 35;  // % PWM en pivot sur place
-constexpr unsigned long KEY_TIMEOUT_MS = 500; // coupure moteur si pas de touche recue
+static void applyMotorCommand(Motor &motor, const MotorCommand &cmd)
+{
+    switch (cmd.action)
+    {
+        case MotorAction::Forward:
+            motor.setMotorForward(cmd.speed);
+            break;
+        case MotorAction::Backward:
+            motor.setMotorBackward(cmd.speed);
+            break;
+        case MotorAction::Stop:
+            motor.stopMotor();
+            break;
+    }
+}
 
 void input_key(char c)
 {
-    switch (c)
-    {
-        case 'w':
-            MotDriver.Motors[LEFT].setMotorForward(FORWARD_SPEED);
-            MotDriver.Motors[RIGHT].setMotorForward(FORWARD_SPEED);
-            break;
-        case 's':
-            MotDriver.Motors[LEFT].setMotorBackward(BACKWARD_SPEED);
-            MotDriver.Motors[RIGHT].setMotorBackward(BACKWARD_SPEED);
-            break;
-        case 'a': // pivot vers la gauche
-            MotDriver.Motors[LEFT].setMotorBackward(TURN_SPEED);
-            MotDriver.Motors[RIGHT].setMotorForward(TURN_SPEED);
-            break;
-        case 'd': // pivot vers la droite
-            MotDriver.Motors[LEFT].setMotorForward(TURN_SPEED);
-            MotDriver.Motors[RIGHT].setMotorBackward(TURN_SPEED);
-            break;
-        default: // touche inconnue ou arret explicite
-            MotDriver.Motors[LEFT].stopMotor();
-            MotDriver.Motors[RIGHT].stopMotor();
-            break;
-    }
+    DriveCommand cmd = decodeKey(c);
+    applyMotorCommand(MotDriver.Motors[LEFT], cmd.left);
+    applyMotorCommand(MotDriver.Motors[RIGHT], cmd.right);
 }
 
 struct CabinData {
@@ -167,7 +159,7 @@ void loop() {
             lastKeyTime = millis();
             motorsStopped = false;
         }
-        else if (!motorsStopped && millis() - lastKeyTime > KEY_TIMEOUT_MS) {
+        else if (!motorsStopped && keyTimedOut(millis(), lastKeyTime, KEY_TIMEOUT_MS)) {
             // securite : plus aucune touche recue, on coupe les moteurs
             input_key(0);
             motorsStopped = true;

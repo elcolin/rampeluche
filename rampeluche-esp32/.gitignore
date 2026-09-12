@@ -3,3 +3,7 @@
 .vscode/c_cpp_properties.json
 .vscode/launch.json
 .vscode/ipch
+
+# Captures reelles du RPLIDAR (donnees binaires specifiques a une session,
+# cf. test/fixtures/README.md) : jamais versionnees.
+test/fixtures/*.bin

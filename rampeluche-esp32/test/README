@@ -24,3 +24,19 @@ Homebrew binutils) passe avant celui d'Apple dans le PATH et produit des
 archives dans le mauvais format. Contournement :
 
     PATH="/usr/bin:$PATH" pio test -e native
+
+## test_rplidar_decoder
+
+Tests unitaires (Unity) de la logique pure de `lib/RplidarDecoder`
+(decodage des paquets Express Scan du RPLIDAR A2M8 : synchro, checksum,
+interpolation angle/distance, resynchronisation sur un flux d'octets). Meme
+commande que ci-dessus (`pio test -e native`), meme contournement macOS si
+necessaire.
+
+## test_rplidar_decoder_capture
+
+Test complementaire au precedent : rejoue une capture reelle du flux du
+lidar (facultative, non versionnee) a travers le decodeur et verifie des
+proprietes physiquement plausibles (checksum, distances, variete des
+angles). S'auto-ignore (`SKIPPED`) si aucune capture n'est presente. Voir
+`test/fixtures/README.md` pour en generer une avec le materiel.

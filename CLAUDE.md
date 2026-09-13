@@ -31,6 +31,7 @@ Custom subagents live in `.claude/agents/`:
 
 - `code-reviewer`: read-only review of a diff/branch/PR — correctness, real-time constraints, TDD coverage, nebula naming, git workflow.
 - `code-generator`: implements features/fixes following the Workflow above.
+- `agent-generator`: creates/updates/cleans up subagent definitions in `.claude/agents/` and keeps this section in sync.
 
 ## Rules
 

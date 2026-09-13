@@ -48,4 +48,8 @@ Custom subagents live in `.claude/agents/`:
 - Use nebula naming convention.
 - Write comments and document when necessary.
 - Keep things as concise as possible.
-- Every commit and PR an agent creates must carry Claude's attribution (commit trailer + PR footer), using whatever exact wording the running session provides — never fabricate one if none is given.
+- Every commit and PR an agent creates must carry Claude's attribution (commit trailer + PR footer), using whatever exact wording the running session provides — never fabricate one if none is given. When the work is done by a named subagent (e.g. `tech-architect`, `code-generator`, `documentation-generator`, `code-reviewer`, `agent-generator`), add that agent's name to the signature without altering the session-provided wording:
+  - Commit trailer: insert `(<agent-name>)` right after the model name, e.g. `Co-Authored-By: Claude Sonnet 5 (tech-architect) <noreply@anthropic.com>`.
+  - PR footer: append `via the \`<agent-name>\` agent` after the session-provided line, e.g. `🤖 Generated with [Claude Code](https://claude.com/claude-code) via the \`tech-architect\` agent`.
+  When the work is done directly by the main session (no named subagent involved), leave the trailer/footer unchanged as provided by the session.
+- Never include a Claude session URL/link (e.g. a `Claude-Session:` trailer or any `https://claude.ai/code/session_...` link) in a commit message or PR description on this repo — it is public, and such a link must be treated as a potential secret. Only the Co-Authored-By trailer (and PR footer) attribution is required.

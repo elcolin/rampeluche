@@ -197,6 +197,37 @@ void test_stream_decoder_resyncs_after_leading_garbage()
     TEST_ASSERT_FLOAT_WITHIN(0.05f, 0.0f, captured.points[0].angle_deg);
 }
 
+void test_stream_decoder_does_not_pair_packets_across_a_sync_loss()
+{
+    // Si un octet parasite casse l'alignement entre 2 paquets par ailleurs
+    // valides, le decodeur ne doit pas apparier le paquet mis en cache
+    // *avant* le trou avec celui trouve *apres* : rien ne garantit alors
+    // qu'ils sont angulairement consecutifs (cf. finding code-review sur la
+    // PR : un paquet perdu au milieu du flux pouvait sinon produire un lot
+    // de points silencieusement faux, interpole sur un ecart angulaire
+    // n'ayant jamais existe).
+    uint8_t packet1[kExpressPacketSize];
+    uint8_t packet2[kExpressPacketSize];
+    uint8_t packet3[kExpressPacketSize];
+    buildUniformPacket(packet1, 0.0f, true, 1000.0f);
+    buildUniformPacket(packet2, 100.0f, false, 1000.0f);
+    buildUniformPacket(packet3, 110.0f, false, 1000.0f);
+
+    uint8_t stream[kExpressPacketSize * 3 + 1];
+    memcpy(stream, packet1, kExpressPacketSize);
+    stream[kExpressPacketSize] = 0x00; // casse la synchro entre packet1 et packet2
+    memcpy(stream + kExpressPacketSize + 1, packet2, kExpressPacketSize);
+    memcpy(stream + kExpressPacketSize + 1 + kExpressPacketSize, packet3, kExpressPacketSize);
+
+    StreamDecoder decoder;
+    CapturedPoints captured;
+    decoder.feed(stream, sizeof(stream), capturePoints, &captured);
+
+    // Une seule paire decodee (packet2+packet3), jamais (packet1+packet2).
+    TEST_ASSERT_EQUAL_INT(1, captured.callCount);
+    TEST_ASSERT_FLOAT_WITHIN(0.05f, 100.0f, captured.points[0].angle_deg);
+}
+
 void test_stream_decoder_reports_checksum_errors()
 {
     uint8_t packet[kExpressPacketSize];
@@ -241,6 +272,7 @@ int main(int argc, char **argv)
     RUN_TEST(test_decode_capsule_pair_applies_angle_offset_correction);
     RUN_TEST(test_decode_capsule_pair_handles_wraparound_across_zero_degrees);
     RUN_TEST(test_stream_decoder_resyncs_after_leading_garbage);
+    RUN_TEST(test_stream_decoder_does_not_pair_packets_across_a_sync_loss);
     RUN_TEST(test_stream_decoder_reports_checksum_errors);
     RUN_TEST(test_stream_decoder_needs_two_packets_before_first_callback);
     return UNITY_END();

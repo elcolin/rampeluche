@@ -96,12 +96,31 @@ void StreamDecoder::reset()
 
 StreamDecoder::ByteResult StreamDecoder::pushByte(uint8_t b)
 {
-    if (_bufPos == 0 && (b >> 4) != kSyncNibble1) {
-        return ByteResult::Incomplete; // en attente du 1er demi-octet de synchro
-    }
-    if (_bufPos == 1 && (b >> 4) != kSyncNibble2) {
-        _bufPos = 0; // faux positif sur le 1er octet, on relance la recherche
-        return ByteResult::Incomplete;
+    if (_bufPos == 0) {
+        if ((b >> 4) != kSyncNibble1) {
+            // Un octet hors-synchro ici signale un trou dans le flux (perte,
+            // bruit...) : on ne peut plus garantir que le prochain paquet
+            // valide sera l'immediat successeur de _prevPacket, donc on
+            // oublie ce dernier plutot que de risquer d'interpoler entre 2
+            // paquets non consecutifs (angles/distances silencieusement
+            // faux).
+            _hasPrevPacket = false;
+            return ByteResult::Incomplete; // en attente du 1er demi-octet de synchro
+        }
+    } else if (_bufPos == 1) {
+        if ((b >> 4) != kSyncNibble2) {
+            _hasPrevPacket = false; // idem : synchro perdue
+            if ((b >> 4) == kSyncNibble1) {
+                // Cet octet peut lui-meme etre le sync1 d'une nouvelle
+                // trame : on le retente immediatement plutot que de perdre
+                // un octet de plus a relancer la recherche depuis zero.
+                _buf[0] = b;
+                _bufPos = 1;
+            } else {
+                _bufPos = 0;
+            }
+            return ByteResult::Incomplete;
+        }
     }
 
     _buf[_bufPos++] = b;

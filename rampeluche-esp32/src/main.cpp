@@ -100,6 +100,12 @@ void loop() {
     bool motorsStopped = false;
     while (client.connected())
     {
+        // Continuer a vider Serial2 pendant toute la session de pilotage :
+        // sinon le petit buffer RX materiel deborde des qu'un client reste
+        // connecte (le cas d'usage normal), et le decodage lidar degenere
+        // en resynchronisations/erreurs de checksum en continu.
+        LidCtl.poll(onLidarPoints);
+
         if (client.available()) {
             char c = client.read();
             // Serial.println(c);

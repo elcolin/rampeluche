@@ -39,6 +39,7 @@ Custom subagents live in `.claude/agents/`:
 
 ## Rules
 
+- Before tackling any request, check `.claude/agents/` for a subagent that matches the task and use it instead of handling it ad hoc.
 - TDD, always write tests before coding
 - Never commit on main, always branch + PR
 - Make atomic commits

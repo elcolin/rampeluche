@@ -1,0 +1,27 @@
+# Fichiers exclus du contexte de Claude Code : binaires / CAO / artefacts de
+# build, illisibles ou inutiles pour comprendre et modifier le code.
+
+# CAO KiCad : schemas/PCB binaires, backups, librairies vendorisees
+rampeluche-kicad/
+
+# Modeles 3D d'impression (CAO mecanique), binaires
+cad/*.3mf
+
+# Datasheets composants : PDF/images, non exploitables comme texte
+datasheet/**/*.pdf
+datasheet/**/*.png
+
+# Photo du robot
+rampeluche.jpg
+
+# Artefacts de build PlatformIO (regeneres par `pio run`/`pio test`)
+rampeluche-esp32/.pio/
+
+# Config editeur/IDE locale, non versionnee
+rampeluche-esp32/.vscode/
+.vscode/
+
+# Divers / systeme
+.DS_Store
+__pycache__/
+*.pyc

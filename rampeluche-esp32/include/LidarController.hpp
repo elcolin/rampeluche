@@ -4,12 +4,8 @@
 #include "pins.hpp"
 #include "RplidarDecoder.hpp"
 
-struct lidarPacket {
-
-};
-
-#include <cstdint>
-
+// Commandes du protocole RPLIDAR (cf.
+// datasheet/lidar/series_protocol_LR001_SLAMTEC_rplidar_series_protocol).
 enum class RplidarCmd : uint8_t {
     Stop            = 0x25,
     Reset           = 0x40,
@@ -21,25 +17,19 @@ enum class RplidarCmd : uint8_t {
     GetLidarConf    = 0x84,
 };
 
+// Pilote le RPLIDAR sur Serial2 : demarre l'Express Scan et fait transiter
+// les octets recus vers Rplidar::StreamDecoder (lib/RplidarDecoder) pour
+// decodage. poll() est a appeler regulierement depuis loop() ; elle ne
+// bloque pas s'il n'y a pas de donnees disponibles sur l'UART.
 class LidarController {
-    private:
-        uint8_t compute_checksum(size_t size);
-        size_t build_request(uint8_t *out, uint8_t cmd_type, const uint8_t *payload, size_t payload_len);
-        uint8_t compute_checksum(uint8_t cmd_type, const uint8_t *payload, size_t payload_len);
-        Rplidar::StreamDecoder decoder;
     public:
-        // void generate_request_packet(uint8_t command, uint8_t *data, uint8_t payload_size);
         LidarController() = default;
         ~LidarController() = default;
-        void startExpressScan();
-        void getSampleRate();
-        void setup();
 
-        // Lit les octets disponibles sur l'UART du lidar (Serial2) et decode
-        // les paquets Express Scan recus. Appelle onPoints(points, count)
-        // avec les points fraichement decodes (par lots de
-        // Rplidar::kPointsPerPacket = 32) des qu'une paire de paquets
-        // consecutifs a pu etre validee. A appeler regulierement depuis
-        // loop() ; ne bloque pas s'il n'y a pas de donnees disponibles.
-        void poll(Rplidar::StreamDecoder::PointCallback onPoints, void *user_data = nullptr);
+        void setup();
+        void startExpressScan();
+        void poll(Rplidar::StreamDecoder::PointCallback onPoints, void *userData = nullptr);
+
+    private:
+        Rplidar::StreamDecoder decoder;
 };

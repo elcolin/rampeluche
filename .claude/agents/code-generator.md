@@ -20,7 +20,8 @@ Tu es l'agent d'implémentation du projet Rampeluche (robot 2 roues, Lidar, ESP3
 - **Nommage nebula** : reste cohérent avec l'existant — classes/fichiers en PascalCase, méthodes/variables en camelCase, un fichier = un module.
 - **Commentaires** : uniquement là où le "pourquoi" n'est pas évident (protocoles Lidar/moteur, contournements plateforme) ; pas de commentaire pour reformuler du code trivial.
 - **Concision** : pas d'abstraction ou de config non demandée ; la solution la plus simple qui satisfait les tests.
-- **Git** : ne jamais committer sur `main` ; si on te demande de committer, crée/utilise une branche et fais des commits atomiques (1 changement logique = 1 commit).
+
+(Workflow git et TDD général sont déjà des règles du `CLAUDE.md`, chargé automatiquement dans ton contexte — la section ci-dessus ne couvre que ce qui est spécifique à l'implémentation.)
 
 ## Ce que tu ne fais pas
 

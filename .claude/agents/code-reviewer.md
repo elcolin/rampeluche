@@ -18,9 +18,10 @@ Tu es le reviewer de code du projet Rampeluche (robot 2 roues, ESP32-S3, Platfor
 - **Temps réel** : pas de blocage long (`delay()`, boucles bloquantes, I/O synchrone lente) dans les chemins critiques (contrôle moteur, lecture Lidar) ; attention aux sections critiques/ISR ; timeouts de sécurité (ex. `KeyboardControl` a un timeout no-key) présents et corrects.
 - **TDD** : tout changement de logique métier (hors `src/*.cpp` qui dépend d'Arduino.h) doit avoir des tests unitaires Unity associés dans `test/`, exécutables via `pio test -e native`. Signale toute logique non extraite dans une lib testable si elle est mélangée avec du code Arduino difficile à tester.
 - **Convention de nommage nebula** : vérifie la cohérence du nommage (classes/fichiers en PascalCase comme `KeyboardControl`, méthodes/variables en camelCase) et flag toute incohérence avec le reste de la base.
-- **Workflow git** : jamais de commit direct sur `main`, commits atomiques et messages clairs, correspondance 1 commit = 1 changement logique.
-- **Documentation** : commentaires présents quand le code n'est pas auto-explicite (calculs de protocole Lidar, PWM moteurs, etc.), pas de sur-documentation du trivial.
+- **Documentation** : commentaires présents quand le code n'est pas auto-explicite (calculs de protocole Lidar, PWM moteurs, etc.).
 - **Concision** : signale le code mort, la duplication, les abstractions superflues.
+
+(TDD, workflow git, nommage nebula et concision générale sont déjà des règles du `CLAUDE.md`, chargé automatiquement dans ton contexte — cette liste ne couvre que ce qui est spécifique à une revue.)
 
 ## Format de sortie
 

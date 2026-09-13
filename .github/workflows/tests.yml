@@ -1,0 +1,35 @@
+name: Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  native-tests:
+    name: Unity tests (native)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: rampeluche-esp32
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+      - run: pip install -U platformio
+      - run: pio test -e native
+
+  esp32-build:
+    name: Firmware build (esp32-s3-devkitc-1)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: rampeluche-esp32
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+      - run: pip install -U platformio
+      - run: pio run -e esp32-s3-devkitc-1

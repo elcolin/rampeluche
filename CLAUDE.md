@@ -36,6 +36,7 @@ Custom subagents live in `.claude/agents/`:
 - `code-generator`: implements features/fixes following the Workflow above.
 - `documentation-generator`: keeps README.md and the Stack/Architecture sections here up to date from the actual code/hardware.
 - `agent-generator`: creates/updates/cleans up subagent definitions in `.claude/agents/`, keeps this section in sync, and always leaves `model: inherit` (no extra billing) — never pins `sonnet`/`opus`, only `haiku` to cut cost on low-risk mechanical agents.
+- `tech-architect`: read-only analysis of project state (code, git log, issues) against the goals above — proposes short-term next steps, alternative technical approaches (e.g. sensor fusion, RTOS migration strategy) with trade-offs and a recommendation, and a milestone roadmap; only writes a file if explicitly asked to persist a roadmap doc.
 
 ## Rules
 

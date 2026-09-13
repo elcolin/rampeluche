@@ -1,0 +1,42 @@
+
+This directory is intended for PlatformIO Test Runner and project tests.
+
+Unit Testing is a software testing method by which individual units of
+source code, sets of one or more MCU program modules together with associated
+control data, usage procedures, and operating procedures, are tested to
+determine whether they are fit for use. Unit testing finds problems early
+in the development cycle.
+
+More information about PlatformIO Unit Testing:
+- https://docs.platformio.org/en/latest/advanced/unit-testing/index.html
+
+## test_keyboard_control
+
+Tests unitaires (Unity) de la logique pure de `lib/KeyboardControl`
+(decodage touche -> commande moteur, timeout de securite). Ils tournent
+hors cible, sans ESP32 ni Arduino.h :
+
+    pio test -e native
+
+Sur macOS, si le linker echoue avec une erreur du type
+`archive member '/' not a mach-o file`, c'est qu'un `ar` GNU (ex: via
+Homebrew binutils) passe avant celui d'Apple dans le PATH et produit des
+archives dans le mauvais format. Contournement :
+
+    PATH="/usr/bin:$PATH" pio test -e native
+
+## test_rplidar_decoder
+
+Tests unitaires (Unity) de la logique pure de `lib/RplidarDecoder`
+(decodage des paquets Express Scan du RPLIDAR A2M8 : synchro, checksum,
+interpolation angle/distance, resynchronisation sur un flux d'octets). Meme
+commande que ci-dessus (`pio test -e native`), meme contournement macOS si
+necessaire.
+
+## test_rplidar_decoder_capture
+
+Test complementaire au precedent : rejoue une capture reelle du flux du
+lidar (facultative, non versionnee) a travers le decodeur et verifie des
+proprietes physiquement plausibles (checksum, distances, variete des
+angles). S'auto-ignore (`SKIPPED`) si aucune capture n'est presente. Voir
+`test/fixtures/README.md` pour en generer une avec le materiel.

@@ -46,3 +46,4 @@ Custom subagents live in `.claude/agents/`:
 - Use nebula naming convention.
 - Write comments and document when necessary.
 - Keep things as concise as possible.
+- Every commit and PR an agent creates must carry Claude's attribution (commit trailer + PR footer), using whatever exact wording the running session provides — never fabricate one if none is given.

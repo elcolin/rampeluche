@@ -12,7 +12,7 @@ This project aims to create a two wheel bot capable of SLAM and autonomous navig
 - Lidar wired up and its frames decoded, not yet used for obstacle
   avoidance or SLAM
 - Unit tests (Unity, `pio test -e native`) covering the keyboard control
-  logic
+  logic and the Wi-Fi teleop session logic (key decoding, safety timeout)
 
 See [rampeluche-esp32/README.md](rampeluche-esp32/README.md) for details.
 

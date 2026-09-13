@@ -75,3 +75,16 @@ void LidarController::startExpressScan()
     Serial2.write(out, len);
 
 }
+
+void LidarController::poll(Rplidar::StreamDecoder::PointCallback onPoints, void *user_data)
+{
+    int available = Serial2.available();
+    if (available <= 0) {
+        return;
+    }
+
+    uint8_t buf[256];
+    size_t toRead = static_cast<size_t>(available) > sizeof(buf) ? sizeof(buf) : static_cast<size_t>(available);
+    size_t n = Serial2.readBytes(buf, toRead);
+    decoder.feed(buf, n, onPoints, user_data);
+}

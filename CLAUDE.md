@@ -11,7 +11,7 @@ One of the goals is also to migrate on RTOS.
 - Unit tests: Unity, run off-target with `pio test -e native` (pure logic in `lib/`, no `Arduino.h`).
 - Teleop: Python client (`tools/keyboard_client.py`) sending w/a/s/d over Wi-Fi — ESP32 SoftAP + raw TCP socket. Session logic (key decoding, safety-cutoff timeout latch) lives in `lib/WifiTeleopServer`, decoupled from Arduino.h; `main.cpp` only does the low-level socket read loop.
 - Motor control: differential drive through an H-bridge driver (TB6612-style), speed as a 0-100% PWM duty cycle.
-- Sensors: Lidar (SLAMTEC RPLidar A2M8, wired and its frames decoded, not yet consumed for navigation), IMU (LSM9DS1, not yet integrated) — see README.md for datasheets/hardware details.
+- Sensors: Lidar (SLAMTEC RPLidar A2M8, wired; Express Scan packets decoded by `lib/RplidarDecoder` — sync/checksum + angle-distance interpolation between consecutive capsule packets, pure logic unit-tested off-target — not yet consumed for navigation), IMU (LSM9DS1, not yet integrated) — see README.md for datasheets/hardware details.
 
 ## Architecture
 

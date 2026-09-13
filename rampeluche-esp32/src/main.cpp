@@ -4,6 +4,7 @@
 #include "LidarController.hpp"
 #include "RplidarDecoder.hpp"
 #include "KeyboardControl.hpp"
+#include "WifiTeleopServer.hpp"
 #include <WiFi.h>
 
 const uint8_t encoderA = 15;
@@ -62,9 +63,8 @@ static void applyMotorCommand(Motor &motor, const MotorCommand &cmd)
     }
 }
 
-void input_key(char c)
+static void applyDriveCommand(const DriveCommand &cmd)
 {
-    DriveCommand cmd = decodeKey(c);
     applyMotorCommand(MotDriver.Motors[LEFT], cmd.left);
     applyMotorCommand(MotDriver.Motors[RIGHT], cmd.right);
 }
@@ -96,8 +96,7 @@ void loop() {
     }
     LidCtl.poll(onLidarPoints);
 
-    unsigned long lastKeyTime = millis();
-    bool motorsStopped = false;
+    WifiTeleopServer teleop(millis());
     while (client.connected())
     {
         // Continuer a vider Serial2 pendant toute la session de pilotage :
@@ -109,14 +108,14 @@ void loop() {
         if (client.available()) {
             char c = client.read();
             // Serial.println(c);
-            input_key(c);
-            lastKeyTime = millis();
-            motorsStopped = false;
+            applyDriveCommand(teleop.onKeyReceived(c, millis()));
         }
-        else if (!motorsStopped && keyTimedOut(millis(), lastKeyTime, KEY_TIMEOUT_MS)) {
-            // securite : plus aucune touche recue, on coupe les moteurs
-            input_key(0);
-            motorsStopped = true;
+        else {
+            WifiTeleopServer::TimeoutResult timeout = teleop.checkTimeout(millis());
+            if (timeout.triggered) {
+                // securite : plus aucune touche recue, on coupe les moteurs
+                applyDriveCommand(timeout.command);
+            }
         }
     }
     delay(500);

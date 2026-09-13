@@ -11,8 +11,9 @@ This project aims to create a two wheel bot capable of SLAM and autonomous navig
 - Differential drive control through the H-bridge motor driver
 - Lidar wired up and its Express Scan frames decoded (checksum-verified,
   angle/distance interpolated), not yet used for obstacle avoidance or SLAM
-- Unit tests (Unity, `pio test -e native`) covering the keyboard control,
-  RPLidar request-packet encoding and RPLidar decoding logic
+- Unit tests (Unity, `pio test -e native`) covering the keyboard control
+  logic, the Wi-Fi teleop session logic (key decoding, safety timeout),
+  RPLidar request-packet encoding, and RPLidar decoding logic
 
 See [rampeluche-esp32/README.md](rampeluche-esp32/README.md) for details.
 

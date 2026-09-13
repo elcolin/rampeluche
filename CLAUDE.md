@@ -52,3 +52,4 @@ Custom subagents live in `.claude/agents/`:
   - Commit trailer: insert `(<agent-name>)` right after the model name, e.g. `Co-Authored-By: Claude Sonnet 5 (tech-architect) <noreply@anthropic.com>`.
   - PR footer: append `via the \`<agent-name>\` agent` after the session-provided line, e.g. `🤖 Generated with [Claude Code](https://claude.com/claude-code) via the \`tech-architect\` agent`.
   When the work is done directly by the main session (no named subagent involved), leave the trailer/footer unchanged as provided by the session.
+- Never include a Claude session URL/link (e.g. a `Claude-Session:` trailer or any `https://claude.ai/code/session_...` link) in a commit message or PR description on this repo — it is public, and such a link must be treated as a potential secret. Only the Co-Authored-By trailer (and PR footer) attribution is required.

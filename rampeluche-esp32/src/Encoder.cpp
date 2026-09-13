@@ -1,13 +1,5 @@
 #include "Encoder.hpp"
-
-// Table de transition quadrature x4, indexee par (etat_precedent << 2 | etat_courant)
-// ou chaque etat vaut (A << 1 | B). Valeur = +1 (avant), -1 (arriere) ou 0 (invalide/immobile).
-static const int8_t QUAD_TABLE[16] = {
-     0, -1,  1,  0,
-     1,  0,  0, -1,
-    -1,  0,  0,  1,
-     0,  1, -1,  0
-};
+#include "QuadratureDecoder.hpp"
 
 Encoder::Encoder(const uint8_t pinA, const uint8_t pinB)
     : m_pinA(pinA), m_pinB(pinB), m_count(0), m_lastState(0)
@@ -33,8 +25,7 @@ void IRAM_ATTR Encoder::isrTrampoline(void *arg)
 void IRAM_ATTR Encoder::handleInterrupt()
 {
     uint8_t state = (digitalRead(m_pinA) << 1) | digitalRead(m_pinB);
-    uint8_t index = (m_lastState << 2) | state;
-    m_count += QUAD_TABLE[index];
+    m_count += quadratureDelta(m_lastState, state);
     m_lastState = state;
 }
 

@@ -36,7 +36,6 @@ include/            Headers partagés (déclarations de classes, pins)
   DriverMotor.h       Regroupe les 2 moteurs (gauche/droite)
   Motor.hpp           Pilotage d'un moteur DC via pont en H
   LidarController.hpp Protocole série RPLidar (commandes, scan express)
-  WifiHandler.hpp     Classe vide, non utilisée pour l'instant (voir "Dette")
 
 src/                 Implémentation, dépend d'Arduino.h / matériel réel
   main.cpp            setup()/loop() : Wi-Fi, serveur TCP, boucle de pilotage,
@@ -172,9 +171,6 @@ Touches : `w` avancer, `s` reculer, `a`/`d` pivoter sur place, relâcher
 
 ## Dette technique connue
 
-- `include/WifiHandler.hpp` est une classe vide, non instanciée : la
-  logique Wi-Fi vit directement dans `main.cpp` (setup du SoftAP,
-  `WiFiServer`). À supprimer ou à finir d'implémenter.
 - Le parsing LIDAR (`parseExpressPacket` dans `main.cpp`) ne fait que
   logger sur `Serial` ; il n'y a pas encore de consommateur de ces données
   (pas d'évitement d'obstacle, pas de SLAM).

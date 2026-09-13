@@ -6,8 +6,15 @@ This project aims to create a two wheel bot capable of SLAM and autonomous navig
 
 ![Rampeluche](rampeluche.jpg)
 
-- Introducing keyboard control
-- Wifi communication
+- Keyboard teleoperation (w/a/s/d) over Wi-Fi (SoftAP + raw TCP), with a
+  motor safety cutoff if the client disconnects
+- Differential drive control through the H-bridge motor driver
+- Lidar wired up and its frames decoded, not yet used for obstacle
+  avoidance or SLAM
+- Unit tests (Unity, `pio test -e native`) covering the keyboard control
+  logic
+
+See [rampeluche-esp32/README.md](rampeluche-esp32/README.md) for details.
 
 Issues :  
     - Reduce torque on stall for wheel -> digs into the plastic

@@ -22,7 +22,7 @@ void LidarController::startExpressScan()
     while (!Serial2.availableForWrite());
 
     uint8_t payload[kExpressScanPayloadSize] = {0};
-    uint8_t request[8];
+    uint8_t request[Rplidar::requestPacketSize(kExpressScanPayloadSize)];
     size_t len = Rplidar::buildRequestPacket(
         request, static_cast<uint8_t>(RplidarCmd::ExpressScan), payload, sizeof(payload));
     Serial2.write(request, len);

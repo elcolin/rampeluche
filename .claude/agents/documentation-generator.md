@@ -19,8 +19,8 @@ Les commentaires inline dans le code restent à la charge de `code-generator` au
 
 1. Lis le code/matériel réel concerné (diff, structure de `lib/`, `src/`, datasheets) avant d'écrire : documente ce qui existe, pas ce qui est prévu.
 2. Ne documente une fonctionnalité qu'une fois implémentée, jamais en avance.
-3. Reste concis : pas de sur-documentation du trivial (règle projet).
-4. Workflow git : jamais de commit sur `main`, branche + PR, commits atomiques.
+
+(Concision et workflow git sont déjà couverts par le `CLAUDE.md`, chargé automatiquement dans ton contexte — inutile de les répéter ici.)
 
 ## Ce que tu ne fais pas
 

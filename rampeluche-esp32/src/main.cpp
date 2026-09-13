@@ -1,30 +1,14 @@
 #include <Arduino.h>
 #include "DriverMotor.h"
+#include "EncoderController.hpp"
 #include "pins.hpp"
 #include "LidarController.hpp"
 #include "KeyboardControl.hpp"
 #include <WiFi.h>
 
-const uint8_t encoderA = 15;
-const uint8_t encoderB = 16;
 DriverMotor MotDriver;
+EncoderController EncCtl;
 LidarController LidCtl;
-
-volatile bool A;
-volatile bool B;
-
-//   bool A = digitalRead(encoderA);
-//   bool B = digitalRead(encoderB);
-
-volatile long encoderCount = 0;
-volatile unsigned long lastInterruptTime = 0;
-
-void IRAM_ATTR encoderISR() {
-    A = digitalRead(encoderA);
-    B = digitalRead(encoderB);
-    if (A && B)
-        encoderCount++;
-}
 
 WiFiServer server(1234);
 
@@ -42,6 +26,7 @@ void setup() {
 
     server.begin();
     MotDriver.setupDriver();
+    EncCtl.setup();
 }
 
 
@@ -148,6 +133,11 @@ void loop() {
     // LidCtl.generate_request_packet(0x82, (uint8_t *) buf, 0);
     Serial.println();
     memset(buf, 0, read_bytes);
+
+    Serial.printf("Encoders L=%ld R=%ld\n",
+        EncCtl.Encoders[LEFT].getCount(),
+        EncCtl.Encoders[RIGHT].getCount());
+
     unsigned long lastKeyTime = millis();
     bool motorsStopped = false;
     while (client.connected())
@@ -167,12 +157,3 @@ void loop() {
     }
     delay(500);
 }
-
-//     pinMode(encoderA, INPUT_PULLUP);
-//     pinMode(encoderB, INPUT_PULLUP);
-
-//     attachInterrupt(
-//     digitalPinToInterrupt(encoderA),
-//     encoderISR,
-//     CHANGE
-//   );

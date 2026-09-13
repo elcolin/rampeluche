@@ -29,12 +29,7 @@
 
 #include <Arduino.h>
 #include "Motor.hpp"
-
-enum {
-    LEFT = 0,
-    RIGHT = 1,
-    MOT_NUM
-};
+#include "Side.hpp"
 
 class DriverMotor {
     public:

@@ -1,29 +1,42 @@
 # Roadmap Rampeluche
 
-Document de suivi technique — état vérifié dans le code/git au 2026-09-13.
+Document de suivi technique — état vérifié dans le code/git au 2026-09-13
+(mis à jour le même jour : conflit PR #3, nettoyage `WifiHandler.hpp`
+constaté fait, extraction `WifiTeleopServer`/`Motor` ajoutée aux actions).
 Ne remplace pas README.md / CLAUDE.md (Stack et Architecture y restent la
 source de vérité) ; ce fichier trace uniquement les jalons et leurs
 dépendances.
 
 ## État réel vérifié
 
-- `main` est à jour avec `origin/main`. Deux branches ne sont pas mergées :
+- `main` est à jour avec `origin/main` (dernier merge : PR #17, `/feature`
+  slash command — tooling agents, hors périmètre firmware de ce document).
+  Deux branches restent non mergées :
   - `feat/quadrature-encoders` : ajoute `lib/QuadratureDecoder/` + tests
-    Unity (TDD respecté), `Encoder`/`EncoderController`. Prête à être
-    rebasée/mergée, ne dépend de rien d'autre.
+    Unity (TDD respecté), `Encoder`/`EncoderController`. Pas de PR ouverte,
+    juste une branche locale/remote. Ne dépend de rien d'autre, aucun
+    conflit connu avec `main`.
   - PR #3 `worktree-rplidar-decoder` (**DRAFT**) : ajoute `lib/RplidarDecoder/`
     (décodeur Express Scan pur, sans `Arduino.h`, fidèle au SDK SLAMTEC),
     12 tests Unity, validation sync/checksum, `LidarController::poll()`,
-    outil de capture `tools/capture_rplidar_serial.py`. C'est un travail
-    quasi complet : il ne manque que le rebranchement dans `src/main.cpp`
-    (le worktree ne voyait pas les changements WiFi/téléop faits en
-    parallèle sur `main`).
+    outil de capture `tools/capture_rplidar_serial.py`. **Mise à jour :**
+    `gh pr view 3` renvoie désormais `mergeable: CONFLICTING` avec `main`
+    — un rebase est nécessaire avant de sortir du DRAFT, en plus du
+    rebranchement dans `src/main.cpp`.
 - `src/main.cpp` (sur `main`) contient encore le prototype `parseExpressPacket()`
   ad-hoc (décodage non testé, pas de checksum ni resynchronisation) et une
-  boucle téléop bloquante `while (client.connected())`.
-- `include/WifiHandler.hpp` existe mais est une coquille vide (`WifiHandler`
-  sans membre) : le WiFi/TCP est en réalité géré directement dans `main.cpp`
-  (`WiFiServer`, `WiFiClient`), pas dans cette classe.
+  boucle téléop bloquante `while (client.connected())`. Le WiFi/TCP
+  (`WiFiServer`, `WiFiClient`, parsing des touches) reste géré inline dans
+  ce fichier, sans module dédié.
+- `include/WifiHandler.hpp` (coquille vide) a été **supprimé** (PR #19,
+  mergée) : la dette "header qui ne fait rien" a disparu, mais le problème
+  de fond (Wi-Fi/TCP non extrait en module testable) reste entier — voir
+  action court terme "extraire `WifiTeleopServer`" ci-dessous.
+- `include/Motor.hpp`/`src/Motor.cpp` et `include/DriverMotor.h`/
+  `src/DriverMotor.cpp` : logique PWM/direction correcte (table de vérité
+  H-bridge documentée en commentaire) mais couplée à `Arduino.h` dès la
+  déclaration — aucune logique pure extraite, donc aucun test Unity
+  possible sur ce périmètre aujourd'hui.
 - Torque moteur (issue #1, "Configure esp32 signal for torque reduction") :
   **fermée**. `Motor::stopMotor()` met `IN1=LOW, IN2=LOW` ce qui correspond
   bien au mode "Stop" (roue libre) du driver, pas au mode "Short brake" — le
@@ -59,34 +72,60 @@ dépendances.
 
 ## Prochaines étapes court terme
 
-1. **Sortir la PR #3 du DRAFT et la brancher dans `main.cpp`.** Le décodeur
-   testé (`lib/RplidarDecoder`) existe déjà ; le laisser en draft pendant
-   que `main.cpp` continue d'évoluer avec le prototype non testé augmente
-   le risque de divergence/perte du travail. Remplacer le bloc
-   `Serial2.available() >= 84` / `parseExpressPacket()` par
-   `LidCtl.poll(onLidarPoints)` (patch déjà documenté dans la description
-   de la PR). Ferme l'issue #14.
-2. **Merger `feat/quadrature-encoders`.** Indépendant du reste, déjà
-   TDD-compliant, ne bloque aucun autre chantier — à sortir en premier pour
-   limiter les conflits de rebase avec la PR #3 (les deux touchent
-   `main.cpp`).
-3. **Corriger la boucle téléop bloquante (issue #13).** Une fois #1 et #2
+1. **Merger `feat/quadrature-encoders` (ouvrir une PR).** Indépendant du
+   reste, déjà TDD-compliant, aucun conflit connu — à sortir en premier,
+   avant la PR #3, pour limiter le risque de conflits supplémentaires sur
+   `main.cpp`.
+2. **Rebaser la PR #3 sur `main` puis la sortir du DRAFT.** `gh pr view 3`
+   montre `mergeable: CONFLICTING` — le rebase est un préalable, distinct
+   du rebranchement applicatif. Une fois rebasée : remplacer le bloc
+   `Serial2.available() >= 84` / `parseExpressPacket()` de `main.cpp` par
+   `LidCtl.poll(onLidarPoints)` (patch documenté dans la description de la
+   PR). Ferme l'issue #14.
+3. **Extraire un module `lib/WifiTeleopServer/`** pour la logique
+   actuellement inline dans `main.cpp` (parsing du flux TCP, gestion du
+   timeout clavier) — remplace l'ancienne action "nettoyer
+   `WifiHandler.hpp`" (déjà faite via PR #19, mais qui n'a fait que
+   supprimer la coquille vide sans combler le vide fonctionnel). Prérequis
+   structurel avant de pouvoir écrire l'action 4 sans tout mélanger dans
+   `main.cpp`.
+4. **Corriger la boucle téléop bloquante (issue #13).** Une fois 1-3
    mergés, remplacer `while (client.connected())` par un poll non bloquant
    dans `loop()` (solution minimale, sans RTOS) OU basculer directement sur
    deux tâches FreeRTOS (téléop / capteurs) si le jalon **M2** est engagé en
    parallèle. Nécessaire avant tout travail de fusion Lidar+IMU puisque le
    Lidar est aujourd'hui silencieusement coupé pendant la conduite.
-4. **Nettoyer `include/WifiHandler.hpp`.** Soit y déplacer la logique
-   `WiFiServer`/`WiFiClient` actuellement dans `main.cpp` (cohérent avec la
-   décomposition déjà appliquée à `DriverMotor`/`LidarController`), soit
-   supprimer le fichier s'il ne sera pas utilisé — un header vide qui
-   n'implémente rien de ce que son nom promet est une dette silencieuse.
-5. **Intégrer l'IMU LSM9DS1** (lecture brute + tests Unity sur le décodage
+5. **Extraire la logique PWM/direction pure de `Motor`** dans une fonction
+   testable (ex. "quel `IN1`/`IN2`/duty cycle pour telle vitesse/direction
+   demandée", sur le modèle de `KeyboardControl`) — aujourd'hui ce calcul
+   est correct mais entièrement non testé faute d'extraction hors
+   `Arduino.h`.
+6. **Intégrer l'IMU LSM9DS1** (lecture brute + tests Unity sur le décodage
    des registres, sur le modèle de `lib/RplidarDecoder`). Aucun travail de
    fusion capteurs n'est possible avant cette étape : c'est un prérequis
    dur pour le jalon **M3**.
 
 ## Méthodes/approches possibles
+
+### Structure du code (`lib/<Module>` vs découplage message-passing anticipé)
+
+- **Option A — Un `lib/<Module>` par capteur/actionneur, `main.cpp` réduit
+  à un orchestrateur mince (recommandé, prolonge le pattern déjà utilisé
+  par `KeyboardControl`, `RplidarDecoder`, `QuadratureDecoder`).**
+  Avantages : cohérent avec ce qui passe déjà en TDD ; chaque module reste
+  testable isolément (`pio test -e native`) ; chaque module devient une
+  unité naturellement encapsulable dans une tâche FreeRTOS pour M2.
+  Inconvénients : demande de la discipline pour ne pas laisser la logique
+  métier refuir dans `main.cpp` (dérive déjà observée avec
+  `parseExpressPacket`).
+- **Option B — Introduire dès maintenant des files/queues de
+  message-passing entre modules, avant même M2.** Avantages : prépare le
+  découplage FreeRTOS en une seule fois. Inconvénients : sur-ingénierie
+  tant qu'il n'y a qu'une seule tâche (`loop()`) — complexité ajoutée sans
+  bénéfice avant qu'il y ait une vraie concurrence à gérer.
+- **Recommandation :** Option A maintenant (actions court terme 1-6
+  ci-dessus) ; introduire les files/queues (Option B) seulement au moment
+  de M2, quand plusieurs tâches FreeRTOS existeront réellement.
 
 ### RTOS : FreeRTOS (déjà présent via Arduino-ESP32) vs bare-metal
 
@@ -137,10 +176,12 @@ dépendances.
 ## Roadmap par jalons
 
 - **M0 — Consolidation de l'existant (prérequis à tout le reste)**
-  - Merge `feat/quadrature-encoders`, sortie de DRAFT + merge PR #3
+  - Merge `feat/quadrature-encoders`, rebase + sortie de DRAFT + merge PR #3
     (branchement `LidCtl.poll()` dans `main.cpp`, ferme #14).
+  - Extraction `lib/WifiTeleopServer/` (remplace l'ancienne action
+    "nettoyer `WifiHandler.hpp`", déjà faite via PR #19).
   - Fix issue #13 (poll non bloquant ou premier découplage FreeRTOS minimal).
-  - Nettoyage `WifiHandler.hpp`.
+  - Extraction de la logique PWM/direction pure de `Motor` (testable Unity).
   - Dépendances : aucune — c'est le socle de tout ce qui suit.
 
 - **M1 — Lidar exploité en continu**

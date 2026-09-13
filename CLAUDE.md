@@ -9,13 +9,13 @@ One of the goals is also to migrate on RTOS.
 
 - MCU: ESP32-S3 (`rampeluche-esp32/`), PlatformIO + Arduino framework.
 - Unit tests: Unity, run off-target with `pio test -e native` (pure logic in `lib/`, no `Arduino.h`).
-- Teleop: Python client (`tools/keyboard_client.py`) sending w/a/s/d over Wi-Fi — ESP32 SoftAP + raw TCP socket, motor safety cutoff on client timeout.
+- Teleop: Python client (`tools/keyboard_client.py`) sending w/a/s/d over Wi-Fi — ESP32 SoftAP + raw TCP socket. Session logic (key decoding, safety-cutoff timeout latch) lives in `lib/WifiTeleopServer`, decoupled from Arduino.h; `main.cpp` only does the low-level socket read loop.
 - Motor control: differential drive through an H-bridge driver (TB6612-style), speed as a 0-100% PWM duty cycle.
 - Sensors: Lidar (SLAMTEC RPLidar A2M8, wired; Express Scan packets decoded by `lib/RplidarDecoder` — sync/checksum + angle-distance interpolation between consecutive capsule packets, pure logic unit-tested off-target — not yet consumed for navigation), IMU (LSM9DS1, not yet integrated) — see README.md for datasheets/hardware details.
 
 ## Architecture
 
-Main flow: Wi-Fi keyboard client -> SoftAP + raw TCP -> decoded into a left/right motor command -> H-bridge differential drive. Lidar is wired and its frames are decoded, but not yet consumed (no obstacle avoidance/SLAM yet).
+Main flow: Wi-Fi keyboard client -> SoftAP + raw TCP -> `WifiTeleopServer` (decodes each key into a left/right motor command via `KeyboardControl`, latches the safety-stop on client timeout) -> H-bridge differential drive. The blocking per-client read loop in `main.cpp` is unchanged by this. Lidar is wired and its frames are decoded, but not yet consumed (no obstacle avoidance/SLAM yet).
 
 You can read about the architecture in the README.md in the root of the project and also in rampeluche-esp32.
 You can find code in rampeluche-esp32.

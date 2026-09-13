@@ -16,9 +16,10 @@ tools/keyboard_client.py          (PC, Wi-Fi)
    ESP32 SoftAP "ESP32_Control"
         |
    src/main.cpp  (boucle principale)
-        |-- lit une touche client -> KeyboardControl::decodeKey()
-        |-- decodeKey() -> DriveCommand (gauche/droite)
-        |-- applyMotorCommand() -> DriverMotor -> Motor -> pins PWM/IN1/IN2
+        |-- lit un octet sur le socket client -> WifiTeleopServer::onKeyReceived()
+        |     `-- delegue a KeyboardControl::decodeKey() -> DriveCommand (gauche/droite)
+        |-- pas d'octet dispo -> WifiTeleopServer::checkTimeout() (delegue a keyTimedOut())
+        |-- applyDriveCommand()/applyMotorCommand() -> DriverMotor -> Motor -> pins PWM/IN1/IN2
         |
         `-- LidCtl.poll(onLidarPoints) -> Serial2 -> RplidarDecoder::StreamDecoder -> Serial (debug)
 ```
@@ -40,8 +41,9 @@ include/            Headers partagés (déclarations de classes, pins)
                        poll() qui lit Serial2 et restitue les points decodes
 
 src/                 Implémentation, dépend d'Arduino.h / matériel réel
-  main.cpp            setup()/loop() : Wi-Fi, serveur TCP, boucle de pilotage,
-                       poll() du LIDAR (LidarController -> RplidarDecoder)
+  main.cpp            setup()/loop() : Wi-Fi, serveur TCP (lecture bas niveau du
+                       socket uniquement), boucle de pilotage, poll() du LIDAR
+                       (LidarController -> RplidarDecoder)
   DriverMotor.cpp
   Motor.cpp
   LidarController.cpp
@@ -50,6 +52,11 @@ lib/KeyboardControl/  Logique pure de décision "touche -> commande moteur"
   KeyboardControl.hpp   Types (MotorAction, MotorCommand, DriveCommand),
                          constantes de vitesse/timeout, decodeKey(), keyTimedOut()
   KeyboardControl.cpp   Implémentation, aucune dépendance Arduino/matériel
+
+lib/WifiTeleopServer/ Logique pure de session téléop (au-dessus de KeyboardControl)
+  WifiTeleopServer.hpp  Classe WifiTeleopServer : onKeyReceived() (touche -> DriveCommand,
+                         reset du timeout), checkTimeout() (latch du stop de sécurité)
+  WifiTeleopServer.cpp  Implémentation, aucune dépendance Arduino/matériel
 
 lib/RplidarDecoder/   Logique pure de décodage des paquets "Express Scan"
                       du RPLIDAR A2M8 (synchro, checksum, interpolation
@@ -62,6 +69,10 @@ lib/RplidarDecoder/   Logique pure de décodage des paquets "Express Scan"
 test/test_keyboard_control/
   test_main.cpp        Tests unitaires (Unity) de decodeKey()/keyTimedOut(),
                         exécutés hors cible (pas besoin d'ESP32)
+
+test/test_wifi_teleop_server/
+  test_main.cpp        Tests unitaires (Unity) de WifiTeleopServer (décodage touche,
+                        déclenchement/latch du timeout), exécutés hors cible
 
 test/test_rplidar_decoder/
   test_main.cpp        Tests unitaires (Unity) de lib/RplidarDecoder sur des
@@ -100,24 +111,37 @@ l'environnement `native` de PlatformIO :
 pio test -e native
 ```
 
+`lib/WifiTeleopServer` regroupe la logique d'une session téléop au-dessus de
+`KeyboardControl` : la classe `WifiTeleopServer` ne dépend elle non plus que
+de `KeyboardControl.hpp`, pas d'`Arduino.h`/`WiFiClient`. `onKeyReceived()`
+délègue le décodage à `decodeKey()` et réarme le timeout ; `checkTimeout()`
+délègue à `keyTimedOut()` et ne remonte l'ordre de stop qu'une seule fois par
+période de silence (`TimeoutResult::triggered`). Testable elle aussi sous
+`pio test -e native` (voir `test/test_wifi_teleop_server`).
+
 `src/main.cpp` reste le seul endroit qui connecte cette logique au matériel
-réel (`applyMotorCommand()` traduit un `MotorCommand` en appels
-`Motor::setMotorForward/Backward/stopMotor`). `lib/RplidarDecoder` (voir plus
-bas) suit le même principe pour le décodage LIDAR. Ce sont les deux seuls
-modules du firmware couverts par des tests aujourd'hui ; le reste (moteurs,
-pilotage LIDAR, Wi-Fi) n'est vérifiable qu'en conditions réelles, faute
+réel : la boucle `while (client.connected())` lit les octets bruts du socket
+TCP et les pousse à `WifiTeleopServer::onKeyReceived()` (ou appelle
+`checkTimeout()` quand rien n'est disponible), puis `applyDriveCommand()`/
+`applyMotorCommand()` traduisent le `DriveCommand`/`MotorCommand` obtenu en
+appels `Motor::setMotorForward/Backward/stopMotor`. `lib/RplidarDecoder`
+(voir plus bas) suit le même principe pour le décodage LIDAR, via
+`LidarController::poll()`. Ce sont les modules du firmware couverts par des
+tests aujourd'hui ; le reste (moteurs, pilotage LIDAR, Wi-Fi bas niveau)
+n'est vérifiable qu'en conditions réelles, faute
 d'abstraction matérielle testable.
 
 ### Coupure de sécurité si le client décroche
 
-`main.cpp` mémorise l'horodatage de la dernière touche reçue. Si aucune
-touche n'arrive pendant `KEY_TIMEOUT_MS` (500 ms, défini dans
-`KeyboardControl.hpp`), la boucle appelle `input_key(0)` pour arrêter les
-deux moteurs. Ça protège contre une perte de connexion Wi-Fi ou un client
-qui plante avec le robot lancé. Côté client Python, l'envoi est cadencé à
-150 ms (`SEND_INTERVAL`), volontairement bien en dessous du timeout
-firmware, pour qu'un simple relâchement de touche coupe les moteurs de
-façon réactive sans attendre le timeout de sécurité.
+`WifiTeleopServer` mémorise l'horodatage de la dernière touche reçue. Si
+aucune touche n'arrive pendant `KEY_TIMEOUT_MS` (500 ms, défini dans
+`KeyboardControl.hpp`), `checkTimeout()` retourne une commande d'arrêt pour
+les deux moteurs, que `main.cpp` applique via `applyDriveCommand()`. Ça
+protège contre une perte de connexion Wi-Fi ou un client qui plante avec le
+robot lancé. Côté client Python, l'envoi est cadencé à 150 ms
+(`SEND_INTERVAL`), volontairement bien en dessous du timeout firmware, pour
+qu'un simple relâchement de touche coupe les moteurs de façon réactive sans
+attendre le timeout de sécurité.
 
 ### Wi-Fi SoftAP + TCP brut, pas de protocole applicatif
 
@@ -192,7 +216,8 @@ pio run -e esp32-s3-devkitc-1
 pio run -e esp32-s3-devkitc-1 -t upload
 pio device monitor -b 115200
 
-# Tests unitaires (lib/KeyboardControl, lib/RplidarDecoder), sur la machine de dev (pas d'ESP32 requis)
+# Tests unitaires (lib/KeyboardControl, lib/WifiTeleopServer,
+# lib/RplidarDecoder), sur la machine de dev (pas d'ESP32 requis)
 pio test -e native
 ```
 
@@ -223,5 +248,8 @@ Touches : `w` avancer, `s` reculer, `a`/`d` pivoter sur place, relâcher
   d'évitement d'obstacle, pas de SLAM).
 - Du code d'encodeur odométrique (interruption `encoderISR`, comptage de
   ticks) est présent dans `main.cpp` mais commenté / non branché.
+- La boucle `while (client.connected())` de `main.cpp` reste bloquante (elle
+  ne rend la main qu'à la déconnexion du client) ; l'extraction de
+  `WifiTeleopServer` n'a pas touché à ce point.
 - `DriverMotor.h` utilise l'extension `.h` alors que le reste des headers
   du projet utilise `.hpp` — incohérence mineure de nommage.

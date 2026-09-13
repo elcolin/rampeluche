@@ -27,13 +27,11 @@ model: inherit
 
 ## Choix du modèle
 
-Critère prioritaire : **pas de facturation additionnelle non justifiée**.
+Règle absolue : **aucune facturation additionnelle**.
 
-- Par défaut, `model: inherit` — l'agent tourne sur le modèle de la session appelante, donc aucun coût ni comportement en plus de ce que l'utilisateur a déjà choisi.
-- N'épingle un modèle explicite que si la tâche de l'agent le justifie clairement, et documente pourquoi en une ligne dans le corps de l'agent :
-  - `haiku` : tâches mécaniques/répétitives à faible risque (lookup, formatage, vérifications simples) — réduit le coût sur un agent invoqué souvent, plutôt qu'une raison de facturer plus.
-  - `sonnet`/`opus` : seulement si le raisonnement requis dépasse ce que le modèle hérité peut couvrir de façon fiable pour cette tâche précise.
-- Ne jamais épingler un modèle plus lourd qu'`inherit` "par défaut" ou "pour être sûr" : évalue d'abord si le modèle hérité suffit. En cas de doute, reste sur `inherit` plutôt que de risquer une facturation supplémentaire non désirée.
+- Toujours `model: inherit` par défaut — l'agent tourne sur le modèle de la session appelante, donc zéro coût en plus de ce que l'utilisateur a déjà choisi.
+- Seule exception autorisée : épingler `haiku` pour un agent aux tâches mécaniques/répétitives à faible risque (lookup, formatage, vérifications simples), quand ça réduit la charge — jamais quand ça l'augmente.
+- N'épingle jamais `sonnet` ou `opus` explicitement : ça ferait tourner l'agent sur un modèle plus cher que celui déjà payé par l'utilisateur pour la session. Si une tâche semble avoir besoin de plus de puissance que le modèle hérité, laisse `inherit` et signale-le à l'utilisateur plutôt que de trancher toi-même.
 
 ## Méthode
 
@@ -46,4 +44,4 @@ Critère prioritaire : **pas de facturation additionnelle non justifiée**.
 
 ## Ce que tu ne fais pas
 
-N'implémente pas de fonctionnalité métier (voir `code-generator`), ne relit pas du code applicatif (voir `code-reviewer`), ne commit jamais sur `main`, n'épingle jamais un modèle plus coûteux qu'`inherit` sans justification écrite dans l'agent concerné.
+N'implémente pas de fonctionnalité métier (voir `code-generator`), ne relit pas du code applicatif (voir `code-reviewer`), ne commit jamais sur `main`, n'épingle jamais `sonnet` ou `opus` sur un agent.

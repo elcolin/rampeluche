@@ -32,10 +32,26 @@ void test_build_request_packet_encodes_command_without_payload()
     TEST_ASSERT_EQUAL_UINT8_ARRAY(expected, out, sizeof(expected));
 }
 
+// Bug reel : un buffer fixe sous-dimensionne (ex. uint8_t request[8] pour un
+// payload de 5 octets, qui necessite 9 octets) provoque un debordement de
+// pile. requestPacketSize() permet de dimensionner le buffer appelant sans
+// magic number.
+void test_request_packet_size_accounts_for_payload_and_overhead()
+{
+    TEST_ASSERT_EQUAL_size_t(9, requestPacketSize(5));
+}
+
+void test_request_packet_size_with_no_payload()
+{
+    TEST_ASSERT_EQUAL_size_t(4, requestPacketSize(0));
+}
+
 int main(int argc, char **argv)
 {
     UNITY_BEGIN();
     RUN_TEST(test_build_request_packet_encodes_express_scan_with_payload);
     RUN_TEST(test_build_request_packet_encodes_command_without_payload);
+    RUN_TEST(test_request_packet_size_accounts_for_payload_and_overhead);
+    RUN_TEST(test_request_packet_size_with_no_payload);
     return UNITY_END();
 }

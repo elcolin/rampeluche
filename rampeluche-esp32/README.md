@@ -37,8 +37,10 @@ include/            Headers partagés (déclarations de classes, pins)
   pins.hpp            Table de correspondance broches ESP32 <-> matériel
   DriverMotor.h       Regroupe les 2 moteurs (gauche/droite)
   Motor.hpp           Pilotage d'un moteur DC via pont en H
-  LidarController.hpp Protocole série RPLidar (commandes, scan express) +
-                       poll() qui lit Serial2 et restitue les points decodes
+  LidarController.hpp Pilotage du RPLidar sur Serial2 (setup, scan express,
+                       poll()) ; delegue l'encodage des requetes a
+                       lib/RplidarProtocol et le decodage des trames a
+                       lib/RplidarDecoder
 
 src/                 Implémentation, dépend d'Arduino.h / matériel réel
   main.cpp            setup()/loop() : Wi-Fi, serveur TCP (lecture bas niveau du
@@ -66,6 +68,11 @@ lib/RplidarDecoder/   Logique pure de décodage des paquets "Express Scan"
                         buffering incrementaux, callback de points)
   RplidarDecoder.cpp    Implémentation, aucune dépendance Arduino/matériel
 
+lib/RplidarProtocol/  Logique pure d'encodage des paquets de requête envoyés
+                      au RPLIDAR (en-tête, commande, payload, checksum XOR)
+  RplidarProtocol.hpp   buildRequestPacket(), requestPacketSize()
+  RplidarProtocol.cpp   Implémentation, aucune dépendance Arduino/matériel
+
 test/test_keyboard_control/
   test_main.cpp        Tests unitaires (Unity) de decodeKey()/keyTimedOut(),
                         exécutés hors cible (pas besoin d'ESP32)
@@ -78,6 +85,11 @@ test/test_rplidar_decoder/
   test_main.cpp        Tests unitaires (Unity) de lib/RplidarDecoder sur des
                         paquets synthétiques (synchro, checksum, interpolation,
                         resynchronisation), hors cible
+
+test/test_rplidar_protocol/
+  test_main.cpp        Tests unitaires (Unity) de lib/RplidarProtocol :
+                        encodage de requête (avec/sans payload), checksum,
+                        dimensionnement de buffer via requestPacketSize()
 
 test/test_rplidar_decoder_capture/
   test_main.cpp        Test complémentaire optionnel : rejoue une capture
@@ -124,12 +136,15 @@ réel : la boucle `while (client.connected())` lit les octets bruts du socket
 TCP et les pousse à `WifiTeleopServer::onKeyReceived()` (ou appelle
 `checkTimeout()` quand rien n'est disponible), puis `applyDriveCommand()`/
 `applyMotorCommand()` traduisent le `DriveCommand`/`MotorCommand` obtenu en
-appels `Motor::setMotorForward/Backward/stopMotor`. `lib/RplidarDecoder`
-(voir plus bas) suit le même principe pour le décodage LIDAR, via
-`LidarController::poll()`. Ce sont les modules du firmware couverts par des
-tests aujourd'hui ; le reste (moteurs, pilotage LIDAR, Wi-Fi bas niveau)
-n'est vérifiable qu'en conditions réelles, faute
-d'abstraction matérielle testable.
+appels `Motor::setMotorForward/Backward/stopMotor`. `lib/RplidarDecoder` et
+`lib/RplidarProtocol` (voir plus bas) suivent le même principe pour le
+protocole LIDAR (décodage des trames reçues / encodage des requêtes
+envoyées), via `LidarController::poll()`/`startExpressScan()`. Ce sont les
+quatre modules du firmware couverts par des tests aujourd'hui
+(`KeyboardControl`, `WifiTeleopServer`, `RplidarDecoder`, `RplidarProtocol`) ;
+le reste (moteurs, pilotage LIDAR bas niveau, Wi-Fi bas niveau) n'est
+vérifiable qu'en conditions réelles, faute d'abstraction matérielle
+testable.
 
 ### Coupure de sécurité si le client décroche
 
@@ -164,13 +179,21 @@ pourcentage 0-100 plutôt qu'une valeur PWM brute, pour découpler l'appelant
 `DriverMotor` regroupe les deux `Motor` (gauche/droite) et gère la broche
 `STBY` commune aux deux ponts.
 
-### LIDAR : décodage du protocole RPLidar "express scan"
+### LIDAR : protocole RPLidar "express scan"
 
-`LidarController` construit les trames de commande RPLidar (en-tête `0xA5`,
-checksum XOR) et démarre un scan express sur `Serial2`. Le décodage des
-paquets renvoyés par le lidar est extrait dans `lib/RplidarDecoder`, sur le
-même principe que `lib/KeyboardControl` : logique pure (`<cstdint>` seul,
-pas d'`Arduino.h`), testable hors cible via `pio test -e native`.
+`LidarController` orchestre le pilotage du RPLidar sur `Serial2` (`setup()`,
+`startExpressScan()`, `poll()`), mais délègue le protocole série à deux libs
+pures (`<cstdint>` seul, pas d'`Arduino.h`), testables hors cible via
+`pio test -e native`, sur le même principe que `lib/KeyboardControl` :
+
+- `lib/RplidarProtocol` construit les paquets de requête envoyés au lidar
+  (`buildRequestPacket()` : en-tête `0xA5` + commande + taille payload +
+  payload + checksum XOR). `requestPacketSize(payloadLen)` calcule la taille
+  exacte de buffer requise (overhead 4 octets + payload) ; `startExpressScan()`
+  dimensionne son buffer avec ce helper plutôt qu'un magic number, pour
+  éviter un débordement si la taille du payload change.
+- `lib/RplidarDecoder` décode les paquets renvoyés par le lidar (voir
+  ci-dessous).
 
 Chaque paquet "capsule" (84 octets) porte un angle de départ en virgule fixe
 Q6 (degrés x64) et 16 "cabines" de 2 points chacune (distance en Q2, mm x4,
@@ -196,6 +219,9 @@ Le décodeur est testé sur des paquets synthétiques
 (`test/test_rplidar_decoder`) et, en complément optionnel, sur une capture
 réelle du flux série (`test/test_rplidar_decoder_capture`,
 `tools/capture_rplidar_serial.py`, voir `test/fixtures/README.md`).
+L'encodage des requêtes (`lib/RplidarProtocol`) est testé séparément
+(`test/test_rplidar_protocol`) sur des vecteurs de référence issus de la
+doc protocole RPLIDAR.
 
 ## Table des broches (`include/pins.hpp`)
 
@@ -217,7 +243,7 @@ pio run -e esp32-s3-devkitc-1 -t upload
 pio device monitor -b 115200
 
 # Tests unitaires (lib/KeyboardControl, lib/WifiTeleopServer,
-# lib/RplidarDecoder), sur la machine de dev (pas d'ESP32 requis)
+# lib/RplidarDecoder, lib/RplidarProtocol), sur la machine de dev (pas d'ESP32 requis)
 pio test -e native
 ```
 
@@ -248,6 +274,10 @@ Touches : `w` avancer, `s` reculer, `a`/`d` pivoter sur place, relâcher
   d'évitement d'obstacle, pas de SLAM).
 - Du code d'encodeur odométrique (interruption `encoderISR`, comptage de
   ticks) est présent dans `main.cpp` mais commenté / non branché.
+- `LidarController::startExpressScan()` bloque ~500 ms (`delay()`) le temps
+  que le moteur du lidar atteigne sa vitesse nominale. Appelé une seule fois
+  au démarrage (premier tour de `loop()`), donc sans impact récurrent
+  aujourd'hui, mais à traiter avant toute boucle temps réel plus stricte.
 - La boucle `while (client.connected())` de `main.cpp` reste bloquante (elle
   ne rend la main qu'à la déconnexion du client) ; l'extraction de
   `WifiTeleopServer` n'a pas touché à ce point.

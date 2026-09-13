@@ -31,6 +31,7 @@ Custom subagents live in `.claude/agents/`:
 
 - `code-reviewer`: read-only review of a diff/branch/PR — correctness, real-time constraints, TDD coverage, nebula naming, git workflow.
 - `code-generator`: implements features/fixes following the Workflow above.
+- `documentation-generator`: keeps README.md and the Stack/Architecture sections here up to date from the actual code/hardware.
 - `agent-generator`: creates/updates/cleans up subagent definitions in `.claude/agents/`, keeps this section in sync, and always leaves `model: inherit` (no extra billing) — never pins `sonnet`/`opus`, only `haiku` to cut cost on low-risk mechanical agents.
 
 ## Rules
